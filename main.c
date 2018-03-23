@@ -11,18 +11,77 @@
 #include <sys/stat.h>
 #define MAX_PATH 255
 
+enum Action {notdeclared, noaction, user, name, type, print, ls, nouser, path};
+
 
 DIR *do_file (DIR *pDIR,  char *pPATH);
 DIR *do_dir ( char *pPATH/*, char *pFULLpath*/);
 int resolve_relpath(char* pPATH,int count);
-
+char *func_check_path(char* pPATH);
+enum Action func_check_action(char *pACTION);
 
 int main(int argc, char *argv[]){
+    char *pMainPath = NULL;     //Path for the find functions
+    enum Action eAction = notdeclared;
 
+    pMainPath = func_check_path(argv[1]);
 
-    resolve_relpath(argv[1],argc);
+    resolve_relpath(pMainPath,argc);
 
      return 0;
+}
+
+// ################################################################################
+// Functions to check the parameters
+// ################################################################################
+
+
+// --- func_check_path
+// if the first element is a parameter or NULL return "." as path
+// otherwise return the first element as path
+
+char *func_check_path(char *pPATH){
+    //declaration
+    //pt --- pointer temporary
+    DIR *ptDIR = NULL;
+    enum Action tAction = 0;
+
+    //program
+
+    tAction = func_check_action(pPATH);
+
+    if(tAction == notdeclared){
+        ptDIR=opendir(pPATH);
+        if ( ptDIR == NULL) {
+            printf("'%s': %s", pPATH, strerror(errno)); //print the error message
+        }
+        return pPATH;
+    }
+    else
+        return ".";
+}
+
+// --- func_check_action
+
+enum Action func_check_action(char *pACTION){
+    if(pACTION == NULL)
+        return noaction;
+    else if(strcmp(pACTION,"-user")==0)
+        return user;
+    else if(strcmp(pACTION,"-name")==0)
+        return name;
+    else if(strcmp(pACTION,"-type")==0)
+        return type;
+    else if(strcmp(pACTION,"-print")==0)
+        return print;
+    else if(strcmp(pACTION,"-ls")==0)
+        return ls;
+    else if(strcmp(pACTION,"-nouser")==0)
+        return nouser;
+    else if(strcmp(pACTION,"-path")==0)
+        return path;
+    else
+        return notdeclared;
 }
 
 DIR *do_file (DIR *pDIR, char* pPATH){
@@ -49,7 +108,6 @@ DIR *do_file (DIR *pDIR, char* pPATH){
 
 
 }
-
 
 
 DIR *do_dir ( char *pPATH/*, char *pFULLpath*/){
