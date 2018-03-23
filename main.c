@@ -18,18 +18,11 @@ char *expand_path (char *pPATH, char *expand);
 int resolve_relpath(char* pPATH,int count);
 
 
-int main(int argc, char *argv[]) {
-    DIR *pDIRroot = NULL;
-    struct dirent *pdirent = NULL;
-    char pathinput[256] = ".."; //DER
-    int i = 0;
-    int pathlength = 0;
-    char *pPATH_full;
-
+int main(int argc, char *argv[]){
 
 
     resolve_relpath(argv[1],argc);
-
+    //do_dir(argv[1]);
     /*if(argc==1||((argc>1)&&(strcmp(argv[1],".")==0))) {
 
         if ((pPATH_full = (getcwd(NULL, 0))) == NULL) {
@@ -105,7 +98,7 @@ DIR *do_dir ( char *pPATH/*, char *pFULLpath*/){
                 strcat(newpath,pdirent->d_name);
                 strcat(newpath,"\0");
                 //printf("\npPATH:%s",pPATH);
-                printf("\n%s",newpath);
+                //printf("\n%s",newpath);
                 do_file(pDIR,newpath);
 
 
@@ -154,17 +147,13 @@ char *expand_path (char *pPATH, char *expand){
 int resolve_relpath(char* pPATH,int count){
 
     int i=0;
-int a=0;
-    strcat(pPATH,"\0");
 
-    if(count==1||((count>1)&&(strcmp(pPATH,".")==0))) {
 
-//        if ((pPATH = (getcwd(NULL, 0))) == NULL) {
-  //          perror("getcwd error");
-    //    } else {
-            do_dir(pPATH);
-            //free(pPATH);
-      //  }
+    if((count==1)||((count>1)&&((strcmp(pPATH,"~")==0)||(strcmp(pPATH,".")==0)))){
+
+        do_dir(".");
+        //free(pPATH);
+     // }
 
     }else if(count>1 && ((strcmp(pPATH,".."))==0)) {
 
@@ -183,5 +172,9 @@ int a=0;
             do_dir(pPATH);
             free(pPATH);
         }
+    }else if(count>1 && (pPATH[0]=='/')){
+        do_dir(pPATH);
+    }else if(count>1 && (pPATH[0]!='/')){
+        do_dir(pPATH);
     }
 }
