@@ -1,4 +1,4 @@
-//Comments with DER should be changed
+// Check comments with |DEr|
 
 #include <stdio.h>
 #include <unistd.h>     /* for chdir */
@@ -9,7 +9,6 @@
 #include <string.h>    /* for strerror() */
 #include <memory.h>     /* for strerror() */
 #include <sys/stat.h>
-#define MAX_PATH 255
 
 enum Action {notdeclared, noaction, user, name, type, print, ls, nouser, path};
 
@@ -19,10 +18,15 @@ DIR *do_dir ( char *pPATH/*, char *pFULLpath*/);
 int resolve_relpath(char* pPATH,int count);
 char *func_check_path(char* pPATH);
 enum Action func_check_action(char *pACTION);
+void func_check_arguments(char *pARGUMENTS[], int COUNTER, enum Action *pArrAction, char *pArrArgument[]);
+char *func_print_action(enum Action eAction);
 
 int main(int argc, char *argv[]){
     char *pMainPath = NULL;     //Path for the find functions
-    enum Action eAction = notdeclared;
+    enum Action pArrMainAction[argc];
+    char *pArrMainArgument[argc];
+
+    func_check_arguments(argv,argc,pArrMainAction,pArrMainArgument);
 
     pMainPath = func_check_path(argv[1]);
 
@@ -35,6 +39,39 @@ int main(int argc, char *argv[]){
 // Functions to check the parameters
 // ################################################################################
 
+// --- func_check_arguments
+// checks the different actions and the arguments of this
+// writes the actions and the arguments in the arrays of them
+
+void func_check_arguments(char *pARGUMENTS[], int COUNTER, enum Action *pArrAction, char *pArrArgument[]){
+    enum Action etAction = notdeclared;
+    int i = 1;
+    int j = 0;
+    //1) Check if the first argument is the path or a option
+    etAction = func_check_action(pARGUMENTS[i]);
+    if (etAction == notdeclared){   //if it is not declared --> check if it is a path
+        func_check_path(pARGUMENTS[i]);
+        i++;
+    }
+    for(i;i<COUNTER;i++, j++){
+        etAction = func_check_action(pARGUMENTS[i]);
+        pArrAction[j] = etAction; //Action Array
+        //Check if there is an argument for the specified options
+        if(etAction == user || etAction == name || etAction == type || etAction == path){
+            if(pARGUMENTS[++i]==NULL){
+                printf("Missing argument to '%s'",func_print_action(etAction));
+                EXIT_FAILURE;
+            }
+            else{
+                pArrArgument[j] = pARGUMENTS[i]; //Argument Array
+            }
+        }
+        else if(etAction == notdeclared || etAction == noaction){
+            printf("Unknown predicate '%s'",pARGUMENTS[i]);
+            EXIT_FAILURE;
+        }
+    }
+}
 
 // --- func_check_path
 // if the first element is a parameter or NULL return "." as path
@@ -54,6 +91,7 @@ char *func_check_path(char *pPATH){
         ptDIR=opendir(pPATH);
         if ( ptDIR == NULL) {
             printf("'%s': %s", pPATH, strerror(errno)); //print the error message
+            EXIT_FAILURE;
         }
         return pPATH;
     }
@@ -82,6 +120,22 @@ enum Action func_check_action(char *pACTION){
         return path;
     else
         return notdeclared;
+}
+
+// Function returns a string addicted to the action
+char *func_print_action(enum Action eAction){
+    switch(eAction){
+        case notdeclared: return "not declared";
+        case noaction: return "no action";
+        case user: return "-user";
+        case name: return "-name";
+        case type: return "-type";
+        case print: return "-print";
+        case ls: return "-ls";
+        case nouser: return "-nouser";
+        case path: return "-path";
+        default: return "FUNC_PRINT_ACTION: INVALID OPERATION!"; // |DEr| close program with an error?
+    }
 }
 
 DIR *do_file (DIR *pDIR, char* pPATH){
