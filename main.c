@@ -22,6 +22,8 @@ char *func_check_path(char* pPATH);
 enum Action func_check_action(char *pACTION);
 void func_check_arguments(char *pARGUMENTS[], int COUNTER, enum Action *pArrAction, char *pArrArgument[]);
 char *func_print_action(enum Action eAction);
+int func_type(char* pARG, struct stat FILE);
+int func_nouser(struct stat FILE);
 
 int main(int argc, char *argv[]){
     char *pMainPath = NULL;     //Path for the find functions
@@ -33,7 +35,8 @@ int main(int argc, char *argv[]){
 
     pMainPath = func_check_path(argv[1]);
 
-    resolve_relpath(pMainPath,argc,action,argv[3]);
+//    resolve_relpath(pMainPath,argc,action,argv[3]);
+    resolve_relpath(pMainPath,argc,nouser,argv[3]);
 
      return 0;
 }
@@ -141,8 +144,42 @@ char *func_print_action(enum Action eAction){
     }
 }
 
-DIR *do_file (DIR *pDIR, char* pPATH, int action, char* arg,int output){
+// -type
+// return: 1 <--> correct type, 0 <--> incorrect type
+int func_type(char* pARG, struct stat FILE){
+    int t_return = 0;
+    if (S_ISREG(FILE.st_mode) && !strcmp(pARG,"f")) //regular file
+        t_return = 1;
+    else if (S_ISDIR(FILE.st_mode) && !strcmp(pARG,"d")) //directory
+        t_return = 1;
+    else if (S_ISCHR(FILE.st_mode) && !strcmp(pARG,"c")) //character device
+        t_return = 1;
+    else if (S_ISBLK(FILE.st_mode) && !strcmp(pARG,"b")) //block device
+        t_return = 1;
+    else if (S_ISFIFO(FILE.st_mode) && !strcmp(pARG,"p")) //FIFO (named pipe)
+        t_return = 1;
+    else if (S_ISLNK(FILE.st_mode) && !strcmp(pARG,"l")) //symbolic link
+        t_return = 1;
+    else if (S_ISSOCK(FILE.st_mode) && !strcmp(pARG,"s")) //socket
+        t_return = 1;
+    //|DEr| D ... door is missing. Error exprasion on linux find function
+    return t_return;
+}
 
+// -nouser
+// return: 1 <--> correct (nouser), 0 <--> incorrect (user)
+int func_nouser(struct stat FILE){
+    int t_return = 0;
+    struct passwd *tpPWD=NULL;
+    tpPWD=getpwuid(FILE.st_uid);
+    if(tpPWD==NULL){
+        t_return = 1;
+    }
+    //|DEr| errno checken
+    return t_return;
+}
+
+DIR *do_file (DIR *pDIR, char* pPATH, int action, char* arg,int output){
 
     //declaration of the variables
     struct stat file;
@@ -150,6 +187,18 @@ DIR *do_file (DIR *pDIR, char* pPATH, int action, char* arg,int output){
 
         if (lstat(pPATH, &file) == -1) {
             printf("ERROR");
+        }
+
+        if (action == type){
+            if(func_type(arg,file)){
+                printf("\n%s", pPATH);
+            }
+        }
+
+        if (action == nouser){
+            if(func_nouser(file)){
+                printf("\n---------------------------------\n%s", pPATH);
+            }
         }
 
         if (S_ISREG(file.st_mode)) {
