@@ -11,11 +11,12 @@
 #include <sys/stat.h>
 #include<fnmatch.h>
 #include<pwd.h>
+#include<time.h>
 
 enum Action {notdeclared, noaction, user, name, type, print, ls, nouser, path};
 
 
-DIR *do_file (DIR *pDIR,  char *pPATH,int action, char* arg,int output);
+DIR *do_file (DIR *pDIR,  char *pPATH,int action, char* arg,int output,char* file_name);
 DIR *do_dir ( char *pPATH, int action,char* arg);
 int resolve_relpath(char* pPATH,int count,int action,char* arg);
 char *func_check_path(char* pPATH);
@@ -24,7 +25,10 @@ void func_check_arguments(char *pARGUMENTS[], int COUNTER, enum Action *pArrActi
 char *func_print_action(enum Action eAction);
 int func_type(char* pARG, struct stat FILE);
 int func_nouser(struct stat FILE);
-
+void print_ls(struct stat FILE,char* file_name);
+int check_print_user(struct stat FILE,char*arg);
+char* getuser(struct stat FILE);
+char* getgr(struct stat FILE);
 int main(int argc, char *argv[]){
     char *pMainPath = NULL;     //Path for the find functions
     enum Action pArrMainAction[argc];
@@ -36,7 +40,7 @@ int main(int argc, char *argv[]){
     pMainPath = func_check_path(argv[1]);
 
 //    resolve_relpath(pMainPath,argc,action,argv[3]);
-    resolve_relpath(pMainPath,argc,nouser,argv[3]);
+    resolve_relpath(pMainPath,argc,ls,argv[3]);
 
      return 0;
 }
@@ -179,11 +183,11 @@ int func_nouser(struct stat FILE){
     return t_return;
 }
 
-DIR *do_file (DIR *pDIR, char* pPATH, int action, char* arg,int output){
+DIR *do_file (DIR *pDIR, char* pPATH, int action, char* arg,int output,char* file_name){
 
     //declaration of the variables
     struct stat file;
-    struct passwd *user=NULL;
+
 
         if (lstat(pPATH, &file) == -1) {
             printf("ERROR");
@@ -201,46 +205,22 @@ DIR *do_file (DIR *pDIR, char* pPATH, int action, char* arg,int output){
             }
         }
 
-        if (S_ISREG(file.st_mode)) {
-            if((output==1&&action==1)||(action==7)||(action==0)) {
-                printf("\nFile%s", pPATH);
-            }else if(action==3) {
-                if((user=getpwnam(arg))==NULL){         //save user information in struct passwd user
-                    printf("ERROR");
-                } else {
-                    if(file.st_uid==user->pw_uid){
-                        printf("\nUFile%s", pPATH);
-                    }
-                }
 
-            }else if(action==6){
-                printf("%d",file.st_mode);
-                printf("-");
-                printf( (file.st_mode & S_IRUSR) ? "r" : "-");
-                printf( (file.st_mode & S_IWUSR) ? "w" : "-");
-                printf( (file.st_mode & S_IXUSR) ? "x" : "-");
-                printf( (file.st_mode & S_IRGRP) ? "r" : "-");
-                printf( (file.st_mode & S_IWGRP) ? "w" : "-");
-                printf( (file.st_mode & S_IXGRP) ? "x" : "-");
-                printf( (file.st_mode & S_IROTH) ? "r" : "-");
-                printf( (file.st_mode & S_IWOTH) ? "w" : "-");
-                printf( (file.st_mode & S_IXOTH) ? "x" : "-");
+           if((output==1&&action==name)||(action==print)||(action==notdeclared)) {
+                printf("\n%s", pPATH);
+            }else if(action==user) {
+               if(check_print_user(file,arg)){
+                   printf("\n%s", pPATH);
+               }
+
+
+            }else if(action==ls){
+               print_ls(file,file_name);
 
             }
 
-        } else if (S_ISDIR(file.st_mode)) {
-            if((output==1&&action==1)||(action==7)||(action==0)) {
-                printf("\nDirectory:%s", pPATH);
-            }else if(action==3) {
+        if (S_ISDIR(file.st_mode)) {
 
-                if((user=getpwnam(arg))==NULL){
-                    printf("ERROR");
-                } else {
-                    if(file.st_uid==user->pw_uid){
-                        printf("\nUDirectory:%s", pPATH);
-                    }
-                }
-            }
 
             do_dir(pPATH, action, arg);
         }
@@ -287,7 +267,7 @@ DIR *do_dir ( char *pPATH, int action,char* arg) {
 
 
 
-            do_file(pDIR, newpath, action, arg, output);
+            do_file(pDIR, newpath, action, arg, output,pdirent->d_name);
             output=0;
         }
 
@@ -341,4 +321,58 @@ int resolve_relpath(char* pPATH,int count,int action,char* arg){
 
         do_dir(pPATH,action,arg);
     }
+}
+void print_ls(struct stat FILE,char* file_name){
+
+    printf("\t%d",FILE.st_ino);
+    printf((S_ISDIR(FILE.st_mode))? "\td":"\t-");
+    printf( (FILE.st_mode & S_IRUSR) ? "r" : "-");
+    printf( (FILE.st_mode & S_IWUSR) ? "w" : "-");
+    printf( (FILE.st_mode & S_IXUSR) ? "x" : "-");
+    printf( (FILE.st_mode & S_IRGRP) ? "r" : "-");
+    printf( (FILE.st_mode & S_IWGRP) ? "w" : "-");
+    printf( (FILE.st_mode & S_IXGRP) ? "x" : "-");
+    printf( (FILE.st_mode & S_IROTH) ? "r" : "-");
+    printf( (FILE.st_mode & S_IWOTH) ? "w" : "-");
+    printf( (FILE.st_mode & S_IXOTH) ? "x" : "-");
+    printf("\t%d",FILE.st_nlink);
+    printf("\t%10s",getuser(FILE));
+    printf("\t%10s",getgr(FILE));
+    printf("\t%10d",FILE.st_size);
+    printf("\t%s\t%s",ctime(&FILE.st_mtime),file_name);
+
+
+
+}
+int check_print_user(struct stat FILE,char*arg){
+    struct passwd *stuser=NULL;
+
+    if((stuser=getpwnam(arg))==NULL){         //save user information in struct passwd user
+        printf("ERROR");
+        return 0;
+    } else {
+        if(FILE.st_uid==stuser->pw_uid){
+            return 1;
+        }
+    }
+}
+char* getuser(struct stat FILE){
+
+    struct passwd *stuser=NULL;
+
+    if(stuser=getpwuid(FILE.st_uid)){
+     return stuser->pw_name;
+    }else
+        return NULL;
+
+}
+char* getgr(struct stat FILE){
+
+    struct passwd *stuser=NULL;
+
+    if(stuser=getpwuid(FILE.st_gid)){
+        return stuser->pw_name;
+    }else
+        return NULL;
+
 }
