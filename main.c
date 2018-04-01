@@ -4,7 +4,7 @@
 #include <unistd.h>     /* for chdir */
 #include <stdlib.h>     /* for free */
 #include <errno.h>      /* for errno */
-#include <sys/types.h>  /* for opendir */
+//#include <sys/types.h>  /* for opendir */
 #include <dirent.h>     /* for opendir */
 #include <string.h>    /* for strerror() */
 #include <memory.h>     /* for strerror() */
@@ -16,7 +16,7 @@
 enum Action {notdeclared, noaction, user, name, type, print, ls, nouser, path};
 
 
-DIR *do_file (DIR *pDIR,  char *pPATH,int action, char* arg,int output,char* file_name);
+DIR *do_file (DIR *pDIR,  char *pPATH,int action, char* arg,char* file_name);
 DIR *do_dir ( char *pPATH, int action,char* arg);
 int resolve_relpath(char* pPATH,int count,int action,char* arg);
 char *func_check_path(char* pPATH);
@@ -33,14 +33,14 @@ int main(int argc, char *argv[]){
     char *pMainPath = NULL;     //Path for the find functions
     enum Action pArrMainAction[argc];
     char *pArrMainArgument[argc];
-    int action=6;
+
 
     func_check_arguments(argv,argc,pArrMainAction,pArrMainArgument);
 
     pMainPath = func_check_path(argv[1]);
 
 //    resolve_relpath(pMainPath,argc,action,argv[3]);
-    resolve_relpath(pMainPath,argc,ls,argv[3]);
+    resolve_relpath(pMainPath,argc,path,argv[3]);
 
      return 0;
 }
@@ -183,7 +183,7 @@ int func_nouser(struct stat FILE){
     return t_return;
 }
 
-DIR *do_file (DIR *pDIR, char* pPATH, int action, char* arg,int output,char* file_name){
+DIR *do_file (DIR *pDIR, char* pPATH, int action, char* arg,char* file_name){
 
     //declaration of the variables
     struct stat file;
@@ -206,18 +206,26 @@ DIR *do_file (DIR *pDIR, char* pPATH, int action, char* arg,int output,char* fil
         }
 
 
-           if((output==1&&action==name)||(action==print)||(action==notdeclared)) {
+           if(!(fnmatch(arg, file_name, FNM_PATHNAME))){
                 printf("\n%s", pPATH);
-            }else if(action==user) {
+            }else if((action==print)||(action==notdeclared)){
+               printf("\n%s", pPATH);
+           }
+           else if(action==user) {
                if(check_print_user(file,arg)){
                    printf("\n%s", pPATH);
                }
 
 
             }else if(action==ls){
-               print_ls(file,file_name);
+               print_ls(file,pPATH);
 
-            }
+            }else if(action==path){
+               //printf("%s_______%s\n",pPATH,arg);
+               if((strcmp(pPATH,arg)==0)){
+                   printf("\n%s", pPATH);
+               }
+           }
 
         if (S_ISDIR(file.st_mode)) {
 
@@ -235,7 +243,7 @@ DIR *do_dir ( char *pPATH, int action,char* arg) {
     DIR *pDIR = NULL;
     struct dirent *pdirent = NULL;
     int length;
-    int output = 0;
+
 
 
     pDIR = opendir(pPATH);
@@ -261,14 +269,12 @@ DIR *do_dir ( char *pPATH, int action,char* arg) {
             strcat(newpath, pdirent->d_name);
             strcat(newpath, "\0");
                                                      //-name
-                    if (!(fnmatch(arg, pdirent->d_name, FNM_PATHNAME))) {
-                        output = 1;
-                    }
 
 
 
-            do_file(pDIR, newpath, action, arg, output,pdirent->d_name);
-            output=0;
+
+            do_file(pDIR, newpath, action, arg, pdirent->d_name);
+
         }
 
         closedir(pDIR);
@@ -324,7 +330,13 @@ int resolve_relpath(char* pPATH,int count,int action,char* arg){
 }
 void print_ls(struct stat FILE,char* file_name){
 
+    char buffer[80];
+
+    struct tm* tm;
+
+
     printf("\t%d",FILE.st_ino);
+    printf("\t%d",FILE.st_blocks);
     printf((S_ISDIR(FILE.st_mode))? "\td":"\t-");
     printf( (FILE.st_mode & S_IRUSR) ? "r" : "-");
     printf( (FILE.st_mode & S_IWUSR) ? "w" : "-");
@@ -338,9 +350,10 @@ void print_ls(struct stat FILE,char* file_name){
     printf("\t%d",FILE.st_nlink);
     printf("\t%10s",getuser(FILE));
     printf("\t%10s",getgr(FILE));
-    printf("\t%10d",FILE.st_size);
-    printf("\t%s\t%s",ctime(&FILE.st_mtime),file_name);
-
+    printf("\t%10d\t",FILE.st_size);
+    tm=localtime(&FILE.st_mtime);
+    strftime(buffer,80,"%Y %B %d %H : %M\t",tm);
+    printf("\t%40s\t%s\n",buffer,file_name);
 
 
 }
