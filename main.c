@@ -40,7 +40,7 @@ int main(int argc, char *argv[]){
     pMainPath = func_check_path(argv[1]);
 
 //    resolve_relpath(pMainPath,argc,action,argv[3]);
-    resolve_relpath(pMainPath,argc,print,argv[3]);
+    resolve_relpath(pMainPath,argc,user,argv[3]);
 
      return 0;
 }
@@ -208,7 +208,7 @@ DIR *do_file (DIR *pDIR, char* pPATH, int action, char* arg,char* file_name){
         }else if((action==print)||(action==notdeclared)){
                printf("\n%s", pPATH);
         } else if(action==user) {
-               if(check_print_user(file,arg)){
+               if(arg!=NULL&&check_print_user(file,arg)){
                    printf("\n%s", pPATH);
                }
 
@@ -270,6 +270,7 @@ DIR *do_dir ( char *pPATH, int action,char* arg) {
 
 
             do_file(pDIR, newpath, action, arg, pdirent->d_name);
+
 
         }
 
@@ -355,12 +356,20 @@ void print_ls(struct stat FILE,char* file_name){
 }
 int check_print_user(struct stat FILE,char*arg){
     struct passwd *stuser=NULL;
+    struct passwd *iduser=NULL;
+    char* ptr;
+    long t=0;
 
-    if((stuser=getpwnam(arg))==NULL){         //save user information in struct passwd user
+    int length=strlen(arg);
+
+    t=strtol(arg,&ptr,10);
+
+    if(((stuser=getpwnam(arg))==NULL)&&((stuser=getpwuid(t))==NULL)){         //save user information in struct passwd user
         printf("ERROR");
         return 0;
     } else {
         if(FILE.st_uid==stuser->pw_uid){
+
             return 1;
         }
     }
