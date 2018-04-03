@@ -40,7 +40,7 @@ int main(int argc, char *argv[]){
     pMainPath = func_check_path(argv[1]);
 
 //    resolve_relpath(pMainPath,argc,action,argv[3]);
-    resolve_relpath(pMainPath,argc,path,argv[3]);
+    resolve_relpath(pMainPath,argc,print,argv[3]);
 
      return 0;
 }
@@ -197,21 +197,17 @@ DIR *do_file (DIR *pDIR, char* pPATH, int action, char* arg,char* file_name){
             if(func_type(arg,file)){
                 printf("\n%s", pPATH);
             }
-        }
-
-        if (action == nouser){
+        } else if (action == nouser){
             if(func_nouser(file)){
                 printf("\n---------------------------------\n%s", pPATH);
             }
-        }
-
-
-           if(!(fnmatch(arg, file_name, FNM_PATHNAME))){
-                printf("\n%s", pPATH);
-            }else if((action==print)||(action==notdeclared)){
+        } else if(action==name){
+                if(!(fnmatch(arg, file_name, FNM_PATHNAME))) {
+                    printf("\n%s", pPATH);
+                }
+        }else if((action==print)||(action==notdeclared)){
                printf("\n%s", pPATH);
-           }
-           else if(action==user) {
+        } else if(action==user) {
                if(check_print_user(file,arg)){
                    printf("\n%s", pPATH);
                }
@@ -268,7 +264,7 @@ DIR *do_dir ( char *pPATH, int action,char* arg) {
             strcat(newpath, "/");
             strcat(newpath, pdirent->d_name);
             strcat(newpath, "\0");
-                                                     //-name
+                                                    //-name
 
 
 
