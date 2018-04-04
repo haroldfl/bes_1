@@ -14,6 +14,7 @@
 #include<time.h>
 
 enum Action {notdeclared, noaction, user, name, type, print, ls, nouser, path};
+enum Error {wrongnumberofarg, wrongarg, tolongarg, notdeclaredarg, nofileorpath, eerrno};
 
 
 DIR *do_file (DIR *pDIR,  char *pPATH,enum Action *action, char* pArrArgument[],char* file_name);
@@ -29,6 +30,8 @@ void print_ls(struct stat FILE,char* file_name);
 int check_print_user(struct stat FILE,char*arg);
 char* getuser(struct stat FILE);
 char* getgr(struct stat FILE);
+void func_error_expression(enum Error eErrorcode, enum Action eAction, char* arg);
+
 int main(int argc, char *argv[]){
     char *pMainPath = NULL;     //Path for the find functions
     enum Action pArrMainAction[argc];
@@ -69,17 +72,18 @@ void func_check_arguments(char *pARGUMENTS[], int COUNTER, enum Action *pArrActi
         pArrAction[j] = etAction; //Action Array
         //Check if there is an argument for the specified options
         if(etAction == user || etAction == name || etAction == type || etAction == path){
-            if(pARGUMENTS[++i]==NULL){
-                printf("Missing argument to '%s'",func_print_action(etAction));
-                EXIT_FAILURE;
+            if(pARGUMENTS[++i]==NULL) {
+                func_error_expression(wrongnumberofarg, etAction, "");
             }
             else{
+                if(etAction == type && strlen(pARGUMENTS[i])>1) {
+                    func_error_expression(tolongarg, etAction, "");
+                }
                 pArrArgument[j] = pARGUMENTS[i]; //Argument Array
             }
         }
         else if(etAction == notdeclared || etAction == noaction){
-            printf("Unknown predicate '%s'",pARGUMENTS[i]);
-            EXIT_FAILURE;
+            func_error_expression(notdeclaredarg,etAction,pARGUMENTS[i]);
         }
     }
 }
@@ -101,8 +105,7 @@ char *func_check_path(char *pPATH){
     if(tAction == notdeclared){
         ptDIR=opendir(pPATH);
         if ( ptDIR == NULL) {
-            printf("'%s': %s", pPATH, strerror(errno)); //print the error message
-            EXIT_FAILURE;
+            func_error_expression(nofileorpath,tAction,pPATH);
         }
         return pPATH;
     }
@@ -204,7 +207,7 @@ DIR *do_file (DIR *pDIR, char* pPATH, enum Action *action, char* pArrArgument[],
 
 
         if (lstat(pPATH, &file) == -1) {
-            printf("ERROR");
+            func_error_expression(eerrno, notdeclaredarg, pPATH);
         }
 
     while(action[i]!=NULL) {
@@ -278,9 +281,7 @@ DIR *do_dir ( char *pPATH, enum Action *action,char* pArrArgument[]) {
     pDIR = opendir(pPATH);
 
     if (pDIR == NULL) {
-
-        printf("Error");
-        printf(" %s", strerror(errno)); //print the error message
+        func_error_expression(eerrno, notdeclaredarg, pPATH);
 
     } else {
 
@@ -328,8 +329,8 @@ int resolve_relpath(char* pPATH,int count,enum Action *action,char* pArrArgument
     }else if(count>1 && ((strcmp(pPATH,".."))==0)) {
 
         if ((pPATH = (getcwd(NULL, 0))) == NULL) {
-
-            perror("getcwd error");
+            //perror("getcwd error");
+            func_error_expression(eerrno, notdeclaredarg, pPATH);
 
         } else {
 
@@ -437,4 +438,28 @@ char* getgr(struct stat FILE){
     }else
         return NULL;
 
+}
+
+//Error Expression
+void func_error_expression(enum Error eErrorcode, enum Action eAction, char* arg){
+    if((eAction == name || eAction == type || eAction == user || eAction == path) && eErrorcode == wrongnumberofarg){
+        fprintf(stderr, "Missing argument to '%s'",func_print_action(eAction));
+    }
+    else if(eAction == type && eErrorcode == wrongarg){
+        fprintf(stderr, "Unknown argument to '%s': %s",func_print_action(eAction), arg);
+    }
+    else if(eAction == type && eErrorcode == tolongarg){
+        fprintf(stderr, "Arguments to '%s' should contain only one letter",func_print_action(eAction));
+    }
+    else if(eErrorcode == notdeclaredarg){
+        fprintf(stderr, "Unknown predicate '%s'",arg);
+    }
+    else if(eErrorcode == nofileorpath){
+        fprintf(stderr, "'%s': No such file or directory",arg);
+    }
+    else if (eErrorcode == eerrno){
+        fprintf(stderr, "'%s': %s\n",arg, strerror(errno));
+        return;
+    }
+    exit(EXIT_FAILURE);
 }
