@@ -16,9 +16,9 @@
 enum Action {notdeclared, noaction, user, name, type, print, ls, nouser, path};
 
 
-DIR *do_file (DIR *pDIR,  char *pPATH,int action, char* arg,char* file_name);
-DIR *do_dir ( char *pPATH, int action,char* arg);
-int resolve_relpath(char* pPATH,int count,int action,char* arg);
+DIR *do_file (DIR *pDIR,  char *pPATH,enum Action *action, char* pArrArgument[],char* file_name);
+DIR *do_dir ( char *pPATH, enum Action *action,char* pArrArgument[]);
+int resolve_relpath(char* pPATH,int count,enum Action *action,char* pArrArgument[]);
 char *func_check_path(char* pPATH);
 enum Action func_check_action(char *pACTION);
 void func_check_arguments(char *pARGUMENTS[], int COUNTER, enum Action *pArrAction, char *pArrArgument[]);
@@ -39,8 +39,9 @@ int main(int argc, char *argv[]){
 
     pMainPath = func_check_path(argv[1]);
 
+
 //    resolve_relpath(pMainPath,argc,action,argv[3]);
-    resolve_relpath(pMainPath,argc,user,argv[3]);
+    resolve_relpath(pMainPath,argc,pArrMainAction,pArrMainArgument);
 
      return 0;
 }
@@ -183,57 +184,89 @@ int func_nouser(struct stat FILE){
     return t_return;
 }
 
-DIR *do_file (DIR *pDIR, char* pPATH, int action, char* arg,char* file_name){
+DIR *do_file (DIR *pDIR, char* pPATH, enum Action *action, char* pArrArgument[],char* file_name){
 
     //declaration of the variables
     struct stat file;
+    int i=0;
+    int u=0;
+    int ls_help=0;
+/*
+    while(action[i]!=NULL){
+        printf("%s\n",func_print_action(action[i]));
+        i++;
+    }
+    i=0;
+    while(pArrArgument[i]==NULL)i++;
+        printf("%d %s\n",i,pArrArgument[i]);
+  */
+
 
 
         if (lstat(pPATH, &file) == -1) {
             printf("ERROR");
         }
 
-        if (action == type){
-            if(func_type(arg,file)){
+    while(action[i]!=NULL) {
+        //printf("%s\n",func_print_action(action[i]));
+
+        if (action[i] == type) {
+            if (func_type(pArrArgument[i], file)) {
                 printf("\n%s", pPATH);
             }
-        } else if (action == nouser){
-            if(func_nouser(file)){
+        } else if (action[i] == nouser) {
+            if (func_nouser(file)) {
                 printf("\n---------------------------------\n%s", pPATH);
             }
-        } else if(action==name){
-                if(!(fnmatch(arg, file_name, FNM_PATHNAME))) {
-                    printf("\n%s", pPATH);
-                }
-        }else if((action==print)||(action==notdeclared)){
-               printf("\n%s", pPATH);
-        } else if(action==user) {
-               if(arg!=NULL&&check_print_user(file,arg)){
-                   printf("\n%s", pPATH);
-               }
+        } else if (action[i] == name) {
+
+            if (!(fnmatch(pArrArgument[i], file_name, FNM_PATHNAME))) {
+                //printf("\n%s", pPATH);
+                u++;
+            }
+        } else if ((action[i] == print) || (action[i] == notdeclared)) {
+            //printf("\n%s", pPATH);
+            u++;
+        } else if (action[i] == user) {
+            if (check_print_user(file, pArrArgument[i])) {
+                u++;
+            }
 
 
-            }else if(action==ls){
-               print_ls(file,pPATH);
+        } else if (action[i] == ls) {
+            ls_help=1;
+            u++;
 
-            }else if(action==path){
-               //printf("%s_______%s\n",pPATH,arg);
-               if((strcmp(pPATH,arg)==0)){
-                   printf("\n%s", pPATH);
-               }
-           }
-
+        } else if (action[i] == path) {
+            //printf("%s_______%s\n",pPATH,pArrArgument[i]);
+            if ((strcmp(pPATH, pArrArgument[i]) == 0)) {
+                u++;
+                //printf("\n%s", pPATH);
+            }
+        }
+    i++;
+    }
+    if((u==i) && (ls_help==0)){
+        printf("\n%s", pPATH);
+    }else if((u==i) && (ls_help==1)){
+        //printf("\n%s", pPATH);
+        print_ls(file, pPATH);
+    }
+    u=0;
+    i=0;
+    ls_help=0;
+    
         if (S_ISDIR(file.st_mode)) {
 
 
-            do_dir(pPATH, action, arg);
+            do_dir(pPATH, action, pArrArgument);
         }
 
 
 }
 
 
-DIR *do_dir ( char *pPATH, int action,char* arg) {
+DIR *do_dir ( char *pPATH, enum Action *action,char* pArrArgument[]) {
     //open the directory if the name has an other name as "." or ".."
     //relative path: ../name1/name2/name3
     DIR *pDIR = NULL;
@@ -269,7 +302,7 @@ DIR *do_dir ( char *pPATH, int action,char* arg) {
 
 
 
-            do_file(pDIR, newpath, action, arg, pdirent->d_name);
+            do_file(pDIR, newpath, action, pArrArgument, pdirent->d_name);
 
 
         }
@@ -281,14 +314,14 @@ DIR *do_dir ( char *pPATH, int action,char* arg) {
 }
 
 
-int resolve_relpath(char* pPATH,int count,int action,char* arg){
+int resolve_relpath(char* pPATH,int count,enum Action *action,char* pArrArgument[]){
 
     int i=0;
 
 
     if((count==1)||((count>1)&&((strcmp(pPATH,"~")==0)||(strcmp(pPATH,".")==0)))){
 
-        do_dir(".",action,arg);
+        do_dir(".",action,pArrArgument);
         //free(pPATH);
      // }
 
@@ -311,18 +344,18 @@ int resolve_relpath(char* pPATH,int count,int action,char* arg){
 
             pPATH[i]='\0';
 
-            do_dir(pPATH,action,arg);
+            do_dir(pPATH,action,pArrArgument);
 
             free(pPATH);
         }
 
     }else if(count>1 && (pPATH[0]=='/')){
 
-        do_dir(pPATH,action,arg);
+        do_dir(pPATH,action,pArrArgument);
 
     }else if(count>1 && (pPATH[0]!='/')){
 
-        do_dir(pPATH,action,arg);
+        do_dir(pPATH,action,pArrArgument);
     }
 }
 void print_ls(struct stat FILE,char* file_name){
@@ -360,19 +393,30 @@ int check_print_user(struct stat FILE,char*arg){
     char* ptr;
     long t=0;
 
-    int length=strlen(arg);
+
 
     t=strtol(arg,&ptr,10);
 
-    if(((stuser=getpwnam(arg))==NULL)&&((stuser=getpwuid(t))==NULL)){         //save user information in struct passwd user
-        printf("ERROR");
-        return 0;
-    } else {
+
+
+
+    if(((getpwnam(arg))!=NULL)) {
+        stuser=(getpwnam(arg));
+
+        if(FILE.st_uid==stuser->pw_uid){
+
+            return 1;
+        }
+    }else if((getpwuid(t))!=NULL){         //save user information in struct passwd user
+        stuser=(getpwuid(t));
         if(FILE.st_uid==stuser->pw_uid){
 
             return 1;
         }
     }
+        return 0;
+
+
 }
 char* getuser(struct stat FILE){
 
