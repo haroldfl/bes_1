@@ -16,6 +16,7 @@ CD=cd
 MV=mv
 GREP=grep
 DOXYGEN=doxygen
+RM=rm
 
 OBJECTS=myfind.o
 
