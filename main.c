@@ -1,7 +1,7 @@
 // Check comments with |DEr|
 
 #include <stdio.h>
-#include <unistd.h>     /* for chdir */
+#include <unistd.h>     /* for chdirect */
 #include <stdlib.h>     /* for free */
 #include <errno.h>      /* for errno */
 //#include <sys/types.h>  /* for opendir */
@@ -31,6 +31,7 @@ int check_print_user(struct stat FILE,char*arg);
 char* getuser(struct stat FILE);
 char* getgr(struct stat FILE);
 void func_error_expression(enum Error eErrorcode, enum Action eAction, char* arg);
+int check_valid_action(enum Action action);
 
 int main(int argc, char *argv[]){
     char *pMainPath = NULL;     //Path for the find functions
@@ -96,7 +97,7 @@ char *func_check_path(char *pPATH){
     //declaration
     //pt --- pointer temporary
     DIR *ptDIR = NULL;
-    enum Action tAction = 0;
+    enum Action tAction;
 
     //program
 
@@ -192,8 +193,9 @@ DIR *do_file (DIR *pDIR, char* pPATH, enum Action *action, char* pArrArgument[],
     //declaration of the variables
     struct stat file;
     int i=0;
-    int u=0;
+    int check=0;
     int ls_help=0;
+
 /*
     while(action[i]!=NULL){
         printf("%s\n",func_print_action(action[i]));
@@ -207,10 +209,10 @@ DIR *do_file (DIR *pDIR, char* pPATH, enum Action *action, char* pArrArgument[],
 
 
         if (lstat(pPATH, &file) == -1) {
-            func_error_expression(eerrno, notdeclaredarg, pPATH);
+            func_error_expression(eerrno, notdeclared, pPATH);
         }
 
-    while(action[i]!=NULL) {
+     while(check_valid_action(action[i])){
         //printf("%s\n",func_print_action(action[i]));
 
         if (action[i] == type) {
@@ -225,37 +227,37 @@ DIR *do_file (DIR *pDIR, char* pPATH, enum Action *action, char* pArrArgument[],
 
             if (!(fnmatch(pArrArgument[i], file_name, FNM_PATHNAME))) {
                 //printf("\n%s", pPATH);
-                u++;
+                check++;
             }
         } else if ((action[i] == print) || (action[i] == notdeclared)) {
             //printf("\n%s", pPATH);
-            u++;
+            check++;
         } else if (action[i] == user) {
             if (check_print_user(file, pArrArgument[i])) {
-                u++;
+                check++;
             }
 
 
         } else if (action[i] == ls) {
             ls_help=1;
-            u++;
+            check++;
 
         } else if (action[i] == path) {
             //printf("%s_______%s\n",pPATH,pArrArgument[i]);
             if ((strcmp(pPATH, pArrArgument[i]) == 0)) {
-                u++;
+                check++;
                 //printf("\n%s", pPATH);
             }
         }
     i++;
     }
-    if((u==i) && (ls_help==0)){
+    if((check==i) && (ls_help==0)){
         printf("\n%s", pPATH);
-    }else if((u==i) && (ls_help==1)){
+    }else if((check==i) && (ls_help==1)){
         //printf("\n%s", pPATH);
         print_ls(file, pPATH);
     }
-    u=0;
+    check=0;
     i=0;
     ls_help=0;
     
@@ -274,14 +276,14 @@ DIR *do_dir ( char *pPATH, enum Action *action,char* pArrArgument[]) {
     //relative path: ../name1/name2/name3
     DIR *pDIR = NULL;
     struct dirent *pdirent = NULL;
-    int length;
+    long int length;
 
 
 
     pDIR = opendir(pPATH);
 
     if (pDIR == NULL) {
-        func_error_expression(eerrno, notdeclaredarg, pPATH);
+        func_error_expression(eerrno, notdeclared, pPATH);
 
     } else {
 
@@ -317,7 +319,7 @@ DIR *do_dir ( char *pPATH, enum Action *action,char* pArrArgument[]) {
 
 int resolve_relpath(char* pPATH,int count,enum Action *action,char* pArrArgument[]){
 
-    int i=0;
+    long int i=0;
 
 
     if((count==1)||((count>1)&&((strcmp(pPATH,"~")==0)||(strcmp(pPATH,".")==0)))){
@@ -330,7 +332,7 @@ int resolve_relpath(char* pPATH,int count,enum Action *action,char* pArrArgument
 
         if ((pPATH = (getcwd(NULL, 0))) == NULL) {
             //perror("getcwd error");
-            func_error_expression(eerrno, notdeclaredarg, pPATH);
+            func_error_expression(eerrno, notdeclared, pPATH);
 
         } else {
 
@@ -366,8 +368,8 @@ void print_ls(struct stat FILE,char* file_name){
     struct tm* tm;
 
 
-    printf("\t%d",FILE.st_ino);
-    printf("\t%d",FILE.st_blocks);
+    printf("\t%ld",FILE.st_ino);
+    printf("\t%ld",FILE.st_blocks);
     printf((S_ISDIR(FILE.st_mode))? "\td":"\t-");
     printf( (FILE.st_mode & S_IRUSR) ? "r" : "-");
     printf( (FILE.st_mode & S_IWUSR) ? "w" : "-");
@@ -378,10 +380,10 @@ void print_ls(struct stat FILE,char* file_name){
     printf( (FILE.st_mode & S_IROTH) ? "r" : "-");
     printf( (FILE.st_mode & S_IWOTH) ? "w" : "-");
     printf( (FILE.st_mode & S_IXOTH) ? "x" : "-");
-    printf("\t%d",FILE.st_nlink);
+    printf("\t%ld",FILE.st_nlink);
     printf("\t%10s",getuser(FILE));
     printf("\t%10s",getgr(FILE));
-    printf("\t%10d\t",FILE.st_size);
+    printf("\t%10ld\t",FILE.st_size);
     tm=localtime(&FILE.st_mtime);
     strftime(buffer,80,"%Y %B %d %H : %M\t",tm);
     printf("\t%40s\t%s\n",buffer,file_name);
@@ -390,7 +392,7 @@ void print_ls(struct stat FILE,char* file_name){
 }
 int check_print_user(struct stat FILE,char*arg){
     struct passwd *stuser=NULL;
-    struct passwd *iduser=NULL;
+
     char* ptr;
     long t=0;
 
@@ -423,8 +425,9 @@ char* getuser(struct stat FILE){
 
     struct passwd *stuser=NULL;
 
-    if(stuser=getpwuid(FILE.st_uid)){
-     return stuser->pw_name;
+    if(getpwuid(FILE.st_uid)!=NULL){
+        stuser=getpwuid(FILE.st_uid);
+        return stuser->pw_name;
     }else
         return NULL;
 
@@ -433,7 +436,8 @@ char* getgr(struct stat FILE){
 
     struct passwd *stuser=NULL;
 
-    if(stuser=getpwuid(FILE.st_gid)){
+    if(getpwuid(FILE.st_gid)!=NULL){
+        stuser=getpwuid(FILE.st_gid);
         return stuser->pw_name;
     }else
         return NULL;
@@ -463,3 +467,13 @@ void func_error_expression(enum Error eErrorcode, enum Action eAction, char* arg
     }
     exit(EXIT_FAILURE);
 }
+int check_valid_action(enum Action action){
+
+
+
+    if((action!=notdeclared)&&(action!=user)&&(action!=name)&&(action!=type)&&(action!=print)&&(action!=ls)&&(action!=nouser)&&(action!=path)){
+        return 0;
+    }else {
+        return 1;
+    }
+    }
