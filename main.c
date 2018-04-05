@@ -14,7 +14,7 @@
 #include<time.h>
 
 enum Action {notdeclared, noaction, user, name, type, print, ls, nouser, path};
-enum Error {wrongnumberofarg, wrongarg, tolongarg, notdeclaredarg, nofileorpath, eerrno,wronguser};
+enum Error {wrongnumberofarg, wrongarg, tolongarg, notdeclaredarg, nofileorpath, eerrno,wronguser,wrongname};
 
 
 DIR *do_file (/*DIR *pDIR,*/  char *pPATH,enum Action *action, char* pArrArgument[],char* file_name);
@@ -62,6 +62,8 @@ void func_check_arguments(char *pARGUMENTS[], int COUNTER, enum Action *pArrActi
     enum Action etAction = notdeclared;
     int i = 1;
     int j = 0;
+    char bad_chars[]="!@%~|";
+    unsigned int  z;
     //1) Check if the first argument is the path or a option
     etAction = func_check_action(pARGUMENTS[i]);
     if (etAction == notdeclared){   //if it is not declared --> check if it is a path
@@ -79,6 +81,13 @@ void func_check_arguments(char *pARGUMENTS[], int COUNTER, enum Action *pArrActi
             else{
                 if(etAction == type && strlen(pARGUMENTS[i])>1) {
                     func_error_expression(tolongarg, etAction, "");
+                }
+                if(etAction == name ){
+                    for(z=0;z<strlen(bad_chars);++z){
+                        if(strchr(pARGUMENTS[i],bad_chars[z])!=NULL){
+                            func_error_expression(wrongname,name,pARGUMENTS[i]);
+                        }
+                    }
                 }
                 pArrArgument[j] = pARGUMENTS[i]; //Argument Array
             }
@@ -99,6 +108,7 @@ char *func_check_path(char *pPATH){
     DIR *ptDIR = NULL;
     enum Action tAction;
 
+
     //program
 
     tAction = func_check_action(pPATH);
@@ -106,6 +116,8 @@ char *func_check_path(char *pPATH){
     if(tAction == notdeclared){
 
         ptDIR=opendir(pPATH);
+
+
         if ( ptDIR == NULL) {
 
 
@@ -462,6 +474,8 @@ void func_error_expression(enum Error eErrorcode, enum Action eAction, char* arg
     }
     else if(eAction == type && eErrorcode == tolongarg){
         fprintf(stderr, "Arguments to '%s' should contain only one letter",func_print_action(eAction));
+    }else if(eAction == name && eErrorcode==wrongname){
+        fprintf(stderr, "Wrong name argument to action %s '%s'",func_print_action(eAction),arg);
     }
     else if(eErrorcode == notdeclaredarg){
         fprintf(stderr, "Unknown predicate '%s'",arg);
