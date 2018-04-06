@@ -37,7 +37,7 @@ int main(int argc, char *argv[]){
     char *pMainPath = NULL;     //Path for the find functions
     enum Action pArrMainAction[argc];
     char *pArrMainArgument[argc];
-int i=0;
+
 
     func_check_arguments(argv,argc,pArrMainAction,pArrMainArgument);
 
