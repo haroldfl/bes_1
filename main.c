@@ -34,7 +34,7 @@ enum Error {wrongnumberofarg, wrongarg, tolongarg, notdeclaredarg, nofileorpath,
 
 /// ------------------------------------------------------------- functions --
 
-int do_file (/*DIR *pDIR,*/  char *pPATH,enum Action *action, char* pArrArgument[],char* file_name);
+int do_file ( char *pPATH,enum Action *action, char* pArrArgument[],char* file_name);
 DIR *do_dir ( char *pPATH, enum Action *action,char* pArrArgument[], int path_type);
 int resolve_relpath(char* pPATH,int count,enum Action *action,char* pArrArgument[]);
 char *func_check_path(char* pPATH);
@@ -442,7 +442,7 @@ int resolve_relpath(char* pPATH,int count,enum Action *action,char* pArrArgument
 
             pPATH[i]='\0';
             do_dir(pPATH,action,pArrArgument,0);
-            free(pPATH);
+            //free(pPATH);
         }
 
     }else if(count>1 && (pPATH[0]=='/')){
