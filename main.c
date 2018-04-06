@@ -17,8 +17,8 @@ enum Action {notdeclared, noaction, user, name, type, print, ls, nouser, path};
 enum Error {wrongnumberofarg, wrongarg, tolongarg, notdeclaredarg, nofileorpath, eerrno,wronguser,wrongname};
 
 
-DIR *do_file (/*DIR *pDIR,*/  char *pPATH,enum Action *action, char* pArrArgument[],char* file_name);
-DIR *do_dir ( char *pPATH, enum Action *action,char* pArrArgument[]);
+int do_file (/*DIR *pDIR,*/  char *pPATH,enum Action *action, char* pArrArgument[],char* file_name);
+DIR *do_dir ( char *pPATH, enum Action *action,char* pArrArgument[], int path_type);
 int resolve_relpath(char* pPATH,int count,enum Action *action,char* pArrArgument[]);
 char *func_check_path(char* pPATH);
 enum Action func_check_action(char *pACTION);
@@ -37,14 +37,14 @@ int main(int argc, char *argv[]){
     char *pMainPath = NULL;     //Path for the find functions
     enum Action pArrMainAction[argc];
     char *pArrMainArgument[argc];
-
+int i=0;
 
     func_check_arguments(argv,argc,pArrMainAction,pArrMainArgument);
 
-    pMainPath = func_check_path(argv[1]);
-
+   pMainPath = func_check_path(argv[1]);
 
 //    resolve_relpath(pMainPath,argc,action,argv[3]);
+
     resolve_relpath(pMainPath,argc,pArrMainAction,pArrMainArgument);
 
      return 0;
@@ -65,12 +65,13 @@ void func_check_arguments(char *pARGUMENTS[], int COUNTER, enum Action *pArrActi
     char bad_chars[]="!@%~|";
     unsigned int  z;
     //1) Check if the first argument is the path or a option
-    etAction = func_check_action(pARGUMENTS[i]);
-    if (etAction == notdeclared){   //if it is not declared --> check if it is a path
-        func_check_path(pARGUMENTS[i]);
+
+
+    if(func_check_action(pARGUMENTS[i]) == notdeclared){   //if it is not declared --> check if it is a path
+
         i++;
     }
-    for(;i<COUNTER;i++, j++){
+    for(;i<=COUNTER;i++, j++){
         etAction = func_check_action(pARGUMENTS[i]);
         pArrAction[j] = etAction; //Action Array
         //Check if there is an argument for the specified options
@@ -92,7 +93,7 @@ void func_check_arguments(char *pARGUMENTS[], int COUNTER, enum Action *pArrActi
                 pArrArgument[j] = pARGUMENTS[i]; //Argument Array
             }
         }
-        else if(etAction == notdeclared || etAction == noaction){
+        else if(etAction == notdeclared){
             func_error_expression(notdeclaredarg,etAction,pARGUMENTS[i]);
         }
     }
@@ -105,10 +106,31 @@ void func_check_arguments(char *pARGUMENTS[], int COUNTER, enum Action *pArrActi
 char *func_check_path(char *pPATH){
     //declaration
     //pt --- pointer temporary
-    DIR *ptDIR = NULL;
-    enum Action tAction;
+
+    unsigned int  i;
+
+    int length=strlen(pPATH)+1;
+    char temp[length];
+    int j=0;
 
 
+   for(i=0;i<strlen(pPATH);i++) {
+        if (pPATH[i] == 92 || pPATH[i] == '\0') {
+
+            continue;
+        }
+     temp[j++] = pPATH[i];
+    }
+    temp[j]='\0';
+    strcpy(pPATH,temp);
+
+    return pPATH;
+
+
+
+
+
+/*
     //program
 
     tAction = func_check_action(pPATH);
@@ -118,16 +140,18 @@ char *func_check_path(char *pPATH){
         ptDIR=opendir(pPATH);
 
 
-        if ( ptDIR == NULL) {
+        if ( ptDIR == NULL ) {
 
-
-            func_error_expression(nofileorpath,tAction,pPATH);
+           //trcat(pPATH,"\0");
+           strcat("./",pPATH);
+            ptDIR=opendir(pPATH);
+            //func_error_expression(nofileorpath,tAction,pPATH);
         }
         return pPATH;
     }
     else
         return ".";
-}
+*/}
 
 // --- func_check_action
 
@@ -202,8 +226,7 @@ int func_nouser(struct stat FILE){
     //|DEr| errno checken
     return t_return;
 }
-
-DIR *do_file (/*DIR *pDIR, */char* pPATH, enum Action *action, char* pArrArgument[],char* file_name){
+int do_file (/*DIR *pDIR, */char* pPATH, enum Action *action, char* pArrArgument[],char* file_name){
 
     //declaration of the variables
     struct stat file;
@@ -228,7 +251,7 @@ DIR *do_file (/*DIR *pDIR, */char* pPATH, enum Action *action, char* pArrArgumen
             func_error_expression(eerrno, notdeclared, pPATH);
         }
 
-     while(check_valid_action(action[i])){
+     while(action[i]!=notdeclared){
         //printf("%s\n",func_print_action(action[i]));
 
         if (action[i] == type) {
@@ -247,7 +270,7 @@ DIR *do_file (/*DIR *pDIR, */char* pPATH, enum Action *action, char* pArrArgumen
                 //printf("\n%s", pPATH);
                 check++;
             }
-        } else if ((action[i] == print) || (action[i] == notdeclared)) {
+        } else if ((action[i] == print) || (action[i] == noaction)) {
             //printf("\n%s", pPATH);
             check++;
         } else if (action[i] == user) {
@@ -282,26 +305,74 @@ DIR *do_file (/*DIR *pDIR, */char* pPATH, enum Action *action, char* pArrArgumen
         if (S_ISDIR(file.st_mode)) {
 
 
-            do_dir(pPATH, action, pArrArgument);
+            do_dir(pPATH, action, pArrArgument,1);
         }
 
-return NULL;
+return 0;
 }
 
 
-DIR *do_dir ( char *pPATH, enum Action *action,char* pArrArgument[]) {
+DIR *do_dir ( char *pPATH, enum Action *action,char* pArrArgument[],int path_type) {
     //open the directory if the name has an other name as "." or ".."
     //relative path: ../name1/name2/name3
     DIR *pDIR = NULL;
     struct dirent *pdirent = NULL;
-    long int length;
+    long int length=strlen(pPATH);
+unsigned int i=0;
+    char* help;
+    char dat_name[length];
 
 
-
+   // printf("%s",pPATH);
     pDIR = opendir(pPATH);
 
     if (pDIR == NULL) {
-        func_error_expression(eerrno, notdeclared, pPATH);
+        if(path_type==0){
+
+
+            i=strlen(pPATH);
+            help=strrchr(pPATH,'/');
+            strcpy(dat_name,help);
+            help=&dat_name[1];
+            dat_name[0]='\0';
+            //printf("%s",help);
+            do{
+
+                pPATH[i]='\0';
+                i--;
+
+            }while(pPATH[i]!='/');
+            pPATH[i]='\0';
+            pDIR=opendir(pPATH);
+            while ((pdirent = readdir(pDIR)) != NULL) {
+
+                if (strcmp(pdirent->d_name, ".") == 0 || strcmp(pdirent->d_name, "..") == 0) {
+                    continue;
+                }
+
+                if(!(fnmatch(help,pdirent->d_name,FNM_PATHNAME))) {
+
+
+                    do_file(pdirent->d_name, action, pArrArgument, pdirent->d_name);
+                }
+            }
+        }else if(path_type==1){
+            pDIR=opendir(".");
+            while ((pdirent = readdir(pDIR)) != NULL) {
+
+                if (strcmp(pdirent->d_name, ".") == 0 || strcmp(pdirent->d_name, "..") == 0) {
+                    continue;
+                }
+
+                if(!(fnmatch(pPATH,pdirent->d_name,FNM_PATHNAME))) {
+
+
+                    do_file(pdirent->d_name, action, pArrArgument, pdirent->d_name);
+                }
+            }
+        }
+
+
 
     } else {
 
@@ -318,7 +389,7 @@ DIR *do_dir ( char *pPATH, enum Action *action,char* pArrArgument[]) {
             strcat(newpath, "/");
             strcat(newpath, pdirent->d_name);
             strcat(newpath, "\0");
-                                                    //-name
+            //-name
 
 
 
@@ -338,11 +409,12 @@ DIR *do_dir ( char *pPATH, enum Action *action,char* pArrArgument[]) {
 int resolve_relpath(char* pPATH,int count,enum Action *action,char* pArrArgument[]){
 
     long int i=0;
+    long int length=strlen(pPATH)+1;
 
 
     if((count==1)||((count>1)&&((strcmp(pPATH,"~")==0)||(strcmp(pPATH,".")==0)))){
 
-        do_dir(".",action,pArrArgument);
+        do_dir(".",action,pArrArgument,1);
         //free(pPATH);
      // }
 
@@ -365,18 +437,24 @@ int resolve_relpath(char* pPATH,int count,enum Action *action,char* pArrArgument
 
             pPATH[i]='\0';
 
-            do_dir(pPATH,action,pArrArgument);
+            do_dir(pPATH,action,pArrArgument,0);
 
             free(pPATH);
         }
 
     }else if(count>1 && (pPATH[0]=='/')){
 
-        do_dir(pPATH,action,pArrArgument);
+
+        do_dir(pPATH,action,pArrArgument,0);
 
     }else if(count>1 && (pPATH[0]!='/')){
+       length = strlen(pPATH) + 2;
+        char newpath[length];
+        strcpy(newpath, "\0");
+        strcat(newpath,pPATH);
 
-        do_dir(pPATH,action,pArrArgument);
+        do_dir(newpath,action,pArrArgument,1);
+
     }
     return 0;
 }
@@ -495,7 +573,7 @@ int check_valid_action(enum Action action){
 
 
 
-    if((action!=notdeclared)&&(action!=user)&&(action!=name)&&(action!=type)&&(action!=print)&&(action!=ls)&&(action!=nouser)&&(action!=path)){
+    if((action!=noaction)&&(action!=user)&&(action!=name)&&(action!=type)&&(action!=print)&&(action!=ls)&&(action!=nouser)&&(action!=path)){
         return 0;
     }else {
         return 1;
