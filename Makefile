@@ -1,13 +1,3 @@
-##
-## @file Makefile
-## Betriebssysteme Myfind Makefile
-## Beispiel 1
-##
-## @author ibrahim Milli <ic17b063@technikum-wien.at>
-## @author Dominic Ernstbrunner <ic17b015@technikum-wien.at>
-## @author Florian Harold <ic17b093@technikum-wien.at>
-
-
 
 CC=gcc52
 CFLAGS=-DDEBUG -Wall -pedantic -Werror -Wextra -Wstrict-prototypes -Wformat=2 -fno-common -ftrapv -g -O3 -std=gnu11
@@ -16,37 +6,37 @@ CD=cd
 MV=mv
 GREP=grep
 DOXYGEN=doxygen
-RM=rm
+RM=rm 
 
 OBJECTS=myfind.o
 
 EXCLUDE_PATTERN=footrulewidth
 
-
-## rules --
-
+##
+## ----------------------------------------------------------------- rules --
+##
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<
 
-
-## targets --
-
+##
+## --------------------------------------------------------------- targets --
+##
 
 
 all: myfind
 
-hello: $(OBJECTS)
+myfind: $(OBJECTS)
 	$(CC) $(CFLAGS) -o "$@" "$^"
 
 .PRECIOUS: %.tex
 
-.PHONY: clean
+
 clean:
-	$(RM) *.o *~ myfind
+	$(RM) *.o *~ main
 
 
-distclean: clean
+distclean: myfind
 	$(RM) -r doc
 
 doc: html pdf
@@ -65,5 +55,4 @@ pdf: html
 	$(RM) *.pdf *.html *.tex *.aux *.sty *.log *.eps *.out *.ind *.idx \
 	      *.ilg *.toc *.tps Makefile && \
 	$(MV) refman.save refman.pdf
-
 
