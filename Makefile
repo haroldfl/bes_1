@@ -33,7 +33,7 @@ myfind: $(OBJECTS)
 
 
 clean:
-	$(RM) *.o *~ main
+	$(RM) *.o *~ myfind
 
 
 distclean: myfind
